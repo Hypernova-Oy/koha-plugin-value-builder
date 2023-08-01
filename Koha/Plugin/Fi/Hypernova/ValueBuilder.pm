@@ -58,6 +58,29 @@ sub intranet_js {
      return q%
          <script>
             $(document).ready(function(){
+                function fuuu() {
+                let biblionumber = document.querySelector("input[name='biblionumber'][type='hidden']");
+                if (!biblionumber) { alert("Koha::Plugin::Fi::Hypernova::ValueBuilder:> Couldn't detect biblionumber!"); return; }
+                else { biblionumber = biblionumber.value }
+                let icn_value_input = document.querySelector("#subfield952o input");
+                if (!biblionumber) { alert("Koha::Plugin::Fi::Hypernova::ValueBuilder:> Couldn't detect items.itemcallnumber input field!"); return; }
+                icn_value_input.addEventListener("focus", function (event) {
+                    if (this.value !== "") { return } // Do not overwrite existing values
+                    this.value = "jes poks";
+                });
+
+
+                    $.ajax('/api/v1/contrib/value-builder/concis_itemcallnumber?biblionumber='+biblionumber)
+                    .then(function(res) {
+                        icn_value_input.value = res.itemcallnumber;
+                    })
+                    .fail(function(err) {
+                        alert(err);
+                        console.log(err);
+                    })
+
+                }
+
                 $('#cataloguing_additem_newitem input[type="submit"]').click(function() {
                     var submit = this;
                     var barcode = $("div#subfield952p input[name=items\\\\.barcode]");
@@ -89,6 +112,27 @@ sub intranet_js {
             })
          </script>
      %;
+}
+
+sub intranet_head {
+     my ( $self ) = @_;
+
+     return <<CSS;
+        <style>
+            .pulse {
+                animation: pulse-animation 2s infinite;
+            }
+
+            @keyframes pulse-animation {
+                0% {
+                    box-shadow: 0 0 0 0px rgba(0, 0, 0, 0.2);
+                }
+                100% {
+                    box-shadow: 0 0 0 20px rgba(0, 0, 0, 0);
+                }
+            }
+        </style>
+CSS
 }
 
 sub api_routes {

@@ -24,14 +24,14 @@ use Koha::Plugin::Fi::Hypernova::ValueBuilder::Factory;
 sub get_concis_itemcallnumber {
     my $c = shift->openapi->valid_input or return;
 
-    my $itemnumber = $c->validation->param('itemnumber');
+    my $biblionumber = $c->validation->param('biblionumber');
 
     my $plugin = Koha::Plugin::Fi::Hypernova::ValueBuilder->new;
 
     my $itemcallnumber;
 
     eval {
-        $itemcallnumber = Koha::Plugin::Fi::Hypernova::ValueBuilder::Factory::concis_itemcallnumber($plugin, $itemnumber);
+        $itemcallnumber = Koha::Plugin::Fi::Hypernova::ValueBuilder::Factory::concis_itemcallnumber($plugin, $biblionumber);
     };
     if ($@) {
         return $c->render( status => 500, openapi => { error => "$@" } );

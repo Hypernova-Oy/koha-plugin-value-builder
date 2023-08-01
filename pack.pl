@@ -29,13 +29,13 @@ use strict;
 use warnings;
 use File::Slurp;
 
-my $mainPackageFile = './Koha/Plugin/Fi/KohaSuomi/SelfService.pm';
+my $mainPackageFile = './Koha/Plugin/Fi/Hypernova/ValueBuilder.pm';
 my $f = File::Slurp::read_file($mainPackageFile);
 unless ($f =~ m/^our \$VERSION\s*=\s*"?(.+?)"?;/gsm) {
   die "Unable to parse 'our \$VERSION = \"????\"' from '$mainPackageFile'";
 }
 my $version  = $1;
-my $filename = "/tmp/koha-plugin-self-service-$version.kpz";
+my $filename = "/tmp/koha-plugin-value-builder-$version.kpz";
 
 print `zip -r $filename Koha/` ."\n";
 

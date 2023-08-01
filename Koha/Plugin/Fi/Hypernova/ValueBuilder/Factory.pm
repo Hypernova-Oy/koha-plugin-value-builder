@@ -18,12 +18,11 @@ package Koha::Plugin::Fi::Hypernova::ValueBuilder::Factory;
 use Modern::Perl;
 
 sub concis_itemcallnumber {
-    my ($plugin, $itemnumber) = @_;
+    my ($plugin, $biblionumber) = @_;
 
-    my $item = Koha::Items->find($itemnumber);
-    my $record = Koha::Biblio::Metadata->find($item->biblionumber)->record;
+    my $record = Koha::Biblio::Metadatas->find($biblionumber)->record;
 
-    return callnumber($plugin, $record).' '.signum($plugin, $record);
+    return _callnumber($plugin, $record).' '._signum($plugin, $record);
 }
 
 sub _callnumber {
@@ -31,8 +30,8 @@ sub _callnumber {
 
     my $pattern_itemcallnumber = $plugin->retrieve_data('pattern_itemcallnumber');
 
-    my $callnumber_field = $record->fields('09.','084','080','082','065','050','060'); #In scalar-context picks the first found instance.
-    $callnumber_field->subfield('a');
+    my $callnumber_field = $record->field('09.','084','080','082','065','050','060'); #In scalar-context picks the first found instance.
+    return $callnumber_field->subfield('a');
 }
 
 sub _signum {
@@ -44,7 +43,7 @@ sub _signum {
     my $nonFillingCharacters = 0;
 
     if (substr($leader,6,1) eq 'g' && ($signumSource = $record->subfield('245', 'a'))) {
-        $nonFillingCharacters = $signumSource->parent()->indicator2();
+        $nonFillingCharacters = $record->field('245')->indicator(2);
     }
     elsif ($signumSource = $record->subfield('100', 'a')) {
 
@@ -63,9 +62,9 @@ sub _signum {
         $nonFillingCharacters = $record->field('245')->indicator(2);
     }
     if ($signumSource) {
-        $record->{signum} = uc(substr($signumSource, $nonFillingCharacters, 3));
+        return uc(substr($signumSource, $nonFillingCharacters, 3));
     }
-    return $signumSource;
+    return '';
 }
 
 1;
