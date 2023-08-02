@@ -31,6 +31,7 @@ sub _callnumber {
     my $pattern_itemcallnumber = $plugin->retrieve_data('pattern_itemcallnumber');
 
     my $callnumber_field = $record->field('09.','084','080','082','065','050','060'); #In scalar-context picks the first found instance.
+    return '' unless $callnumber_field;
     return $callnumber_field->subfield('a');
 }
 

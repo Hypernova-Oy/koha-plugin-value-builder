@@ -37,7 +37,7 @@ unless ($f =~ m/^our \$VERSION\s*=\s*"?(.+?)"?;/gsm) {
 my $version  = $1;
 my $filename = "/tmp/koha-plugin-value-builder-$version.kpz";
 
-print `zip -r $filename Koha/` ."\n";
+print `zip -r $filename Koha/Plugin/` ."\n";
 
 if ( -f $filename ) {
     print "$filename created\n";

@@ -24,7 +24,7 @@ use Mojo::JSON qw(decode_json);
 use Koha::Plugin::Fi::Hypernova::ValueBuilder::Configure;
 use Koha::Plugin::Fi::Hypernova::ValueBuilder::Factory;
 
-our $VERSION = "23.05.0";
+our $VERSION = "23.05.1";
 
 our $metadata = {
     name            => 'Value Builder',
@@ -52,93 +52,10 @@ sub new {
     return $self;
 }
 
-sub intranet_js {
-     my ( $self ) = @_;
-
-     return q%
-         <script>
-            $(document).ready(function(){
-                function fuuu() {
-                let biblionumber = document.querySelector("input[name='biblionumber'][type='hidden']");
-                if (!biblionumber) { alert("Koha::Plugin::Fi::Hypernova::ValueBuilder:> Couldn't detect biblionumber!"); return; }
-                else { biblionumber = biblionumber.value }
-                let icn_value_input = document.querySelector("#subfield952o input");
-                if (!biblionumber) { alert("Koha::Plugin::Fi::Hypernova::ValueBuilder:> Couldn't detect items.itemcallnumber input field!"); return; }
-                icn_value_input.addEventListener("focus", function (event) {
-                    if (this.value !== "") { return } // Do not overwrite existing values
-                    this.value = "jes poks";
-                });
-
-
-                    $.ajax('/api/v1/contrib/value-builder/concis_itemcallnumber?biblionumber='+biblionumber)
-                    .then(function(res) {
-                        icn_value_input.value = res.itemcallnumber;
-                    })
-                    .fail(function(err) {
-                        alert(err);
-                        console.log(err);
-                    })
-
-                }
-
-                $('#cataloguing_additem_newitem input[type="submit"]').click(function() {
-                    var submit = this;
-                    var barcode = $("div#subfield952p input[name=items\\\\.barcode]");
-                    var library_id = $("div#subfield952a select[name=items\\\\.homebranch]");
-
-                    // Koha 21.05 and below support BEGIN
-                    $('*[name="field_value"]').each(function() {
-                        if(/tag_952_subfield_p/.test(this.id)) {
-                            barcode = this;
-                        }
-                        if(/tag_952_subfield_a/.test(this.id)) {
-                            library_id = this;
-                        }
-                    });
-                    // Koha 21.05 and below support END
-
-                    if(!barcode.length || $(barcode).val()) return true;
-                    $.ajax('/api/v1/contrib/barcode-generator/barcode?library_id='+$(library_id).val())
-                    .then(function(res) {
-                        $(barcode).val(res.barcode);
-                        submit.click();
-                    })
-                    .fail(function(err) {
-                        console.log(err);
-                    })
-
-                    return false;
-                })
-            })
-         </script>
-     %;
-}
-
-sub intranet_head {
-     my ( $self ) = @_;
-
-     return <<CSS;
-        <style>
-            .pulse {
-                animation: pulse-animation 2s infinite;
-            }
-
-            @keyframes pulse-animation {
-                0% {
-                    box-shadow: 0 0 0 0px rgba(0, 0, 0, 0.2);
-                }
-                100% {
-                    box-shadow: 0 0 0 20px rgba(0, 0, 0, 0);
-                }
-            }
-        </style>
-CSS
-}
-
 sub api_routes {
     my ( $self, $args ) = @_;
 
-    my $spec_str = $self->mbf_read('openapi.json');
+    my $spec_str = $self->mbf_read('openapi_paths.yaml');
     my $spec     = decode_json($spec_str);
 
     return $spec;
@@ -174,6 +91,97 @@ sub install {
 
 sub uninstall {
     return 1;
+}
+
+sub intranet_js {
+     my ( $self ) = @_;
+
+     return <<'JAVASCRIPT'
+<script>
+if (document.getElementById("cat_additem")) {
+let kpfhvb_plugin_indicator;
+let kpfhvb_icn_value_input;
+
+function kpfhvb_err_and_die(log_object, alert_msg="") {
+    if (!alert_msg && typeof log_object === "string") {
+        alert_msg = log_object;
+    }
+    if (alert_msg) { alert("Koha::Plugin::Fi::Hypernova::ValueBuilder:> "+alert_msg) }
+    console.error(log_object);
+    return;
+}
+function kpfhvb_getBiblionumber () {
+    let biblionumber = document.querySelector("input[name='biblionumber'][type='hidden']");
+    if (!biblionumber) { kpfhvb_err_and_die("Couldn't detect biblionumber!") }
+    return biblionumber.value;
+}
+function kpfhvb_getItemcallnumberValueInputElement () {
+    kpfhvb_icn_value_input = document.querySelector("#subfield952o input");
+    if (!kpfhvb_icn_value_input) { kpfhvb_err_and_die("Couldn't detect items.itemcallnumber input field!") }
+    return kpfhvb_icn_value_input;
+}
+function kpfhvb_bindItemcallnumberInputFieldActions (biblionumber) {
+    kpfhvb_icn_value_input.addEventListener("focus", function (event) {
+        if (this.value !== "") { return } // Do not overwrite existing values
+        kpfhvb_requestConcisItemcallnumber(biblionumber);
+    });
+}
+function kpfhvb_deployPluginIndicator () {
+    icn_input_container = document.querySelector("#subfield952o");
+    if (!icn_input_container) { kpfhvb_err_and_die("Couldn't detect items.itemcallnumber input container!") }
+    kpfhvb_plugin_indicator = document.createElement("i");
+    kpfhvb_plugin_indicator.id = "kpfhvb_plugin_indicator_itemcallnumber";
+    kpfhvb_plugin_indicator.classList.add("fa","fa-lg","fa-puzzle-piece");
+    kpfhvb_plugin_indicator.style.marginLeft = "0.4em";
+    kpfhvb_plugin_indicator.style.fontSize = "2em";
+    kpfhvb_plugin_indicator.title = "Affected by the ValueBuilder-plugin. On input-field focus fetches the itemcallnumber information, if the field is empty.";
+    icn_input_container.append(kpfhvb_plugin_indicator);
+}
+function kpfhvb_requestConcisItemcallnumber (biblionumber) {
+    kpfhvb_plugin_indicator.classList.add("pulsating-animation");
+    $.ajax('/api/v1/contrib/value-builder/concis-itemcallnumber?biblionumber='+biblionumber)
+    .then(function(data, textStatus, jqXHR) {
+        kpfhvb_plugin_indicator.classList.remove("pulsating-animation");
+        kpfhvb_icn_value_input.value = data.itemcallnumber;
+    })
+    .fail(function(jqXHR, textStatus, errorThrown) {
+        kpfhvb_plugin_indicator.classList.remove("pulsating-animation");
+        kpfhvb_icn_value_input.value = "REST API ERROR";
+        kpfhvb_err_and_die(jqXHR, textStatus);
+    })
+}
+$(document).ready(function(){
+    let biblionumber = kpfhvb_getBiblionumber();
+    kpfhvb_icn_value_input = kpfhvb_getItemcallnumberValueInputElement();
+
+    kpfhvb_bindItemcallnumberInputFieldActions(biblionumber);
+
+    kpfhvb_deployPluginIndicator();
+});
+}
+</script>
+JAVASCRIPT
+}
+
+sub intranet_head {
+     my ( $self ) = @_;
+
+     return <<'CSS';
+<style>
+.pulsating-animation {
+    animation: pulse-animation 2s infinite;
+}
+
+@keyframes pulse-animation {
+    0% {
+        box-shadow: 0 0 00px 0px rgba(0, 0, 0, 0.2);
+    }
+    100% {
+        box-shadow: 0 0 10px 10px rgba(0, 0, 0, 0);
+    }
+}
+</style>
+CSS
 }
 
 1;

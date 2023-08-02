@@ -1,0 +1,32 @@
+---
+
+/concis-itemcallnumber:
+  get:
+    x-mojo-to: Fi::Hypernova::ValueBuilder::Controller#get_concis_itemcallnumber
+    operationId: get_concis_itemcallnumber
+    tags:
+      - item
+    parameters:
+      - description: biblionumber
+        in: query
+        name: biblionumber
+        required: true
+        type: number
+    produces:
+      - application/json
+    responses:
+      "200":
+        description: Whatever is configured to be returned
+      "400":
+        description: Bad request
+        schema:
+          type: object
+          properties:
+            error:
+              description: An explanation for the error
+              type: string
+      "500":
+        description: Internal server error
+    x-koha-authorization:
+      permissions:
+        catalogue: "1"
