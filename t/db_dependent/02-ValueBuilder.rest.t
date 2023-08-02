@@ -48,7 +48,7 @@ my $schema = Koha::Database->schema;
 my $builder = t::lib::TestBuilder->new;
 $t::db_dependent::Util::builder = $builder;
 
-#$schema->storage->txn_begin;
+$schema->storage->txn_begin;
 my $plugin = Koha::Plugin::Fi::Hypernova::ValueBuilder->new(); #Make sure the plugin is installed
 Koha::Plugins->new()->InstallPlugins();
 
@@ -58,7 +58,7 @@ t::lib::Mocks::mock_preference( 'RESTBasicAuth', 1 );
 subtest("Scenario: Concis itemcallnumber generation API call.", sub {
     my ($patron, $host, $patronPassword, $biblionumber);
 
-    plan tests => 12;
+    plan tests => 3;
 
     subtest("Given a Patron with the Catalogue-permission", sub {
         plan tests => 1;
@@ -90,7 +90,7 @@ MARC
     });
 
     subtest "GET /value-builder/concis-itemcallnumber" => sub {
-        plan tests => 13;
+        plan tests => 6;
 
         $t->get_ok($host.'/api/v1/contrib/value-builder/concis-itemcallnumber?biblionumber='.$biblionumber)
         ->status_is('200')
@@ -102,7 +102,7 @@ MARC
     };
 });
 
-#$schema->storage->txn_rollback;
+$schema->storage->txn_rollback;
 
 sub prepareBasicAuthHeader {
     my ($username, $password) = @_;

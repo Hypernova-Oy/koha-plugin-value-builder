@@ -24,7 +24,7 @@ use Mojo::JSON qw(decode_json);
 use Koha::Plugin::Fi::Hypernova::ValueBuilder::Configure;
 use Koha::Plugin::Fi::Hypernova::ValueBuilder::Factory;
 
-our $VERSION = "23.05.1";
+our $VERSION = "23.05.2";
 
 our $metadata = {
     name            => 'Value Builder',
@@ -55,7 +55,7 @@ sub new {
 sub api_routes {
     my ( $self, $args ) = @_;
 
-    my $spec_str = $self->mbf_read('openapi_paths.yaml');
+    my $spec_str = $self->mbf_read('openapi_paths.json');
     my $spec     = decode_json($spec_str);
 
     return $spec;
